@@ -3,10 +3,10 @@ from dataclasses import dataclass
 
 
 # Constants -- will likely configure based on cli inputs
-starting_amt = 1000
-ante = 5
-sb = 20
-bb = 40
+starting_amt = 500
+ante = 1
+sb = 5
+bb = 10
 
 
 @dataclass
@@ -21,18 +21,43 @@ class Player:
         return self.name.__hash__()
 
 @dataclass
-class Pot:
-    players_invested: set[Player]
-    size: int = 0
-
-
-@dataclass
 class Game:
     players: list[Player]
     curr_round: int = 0
     dealer_index: int = 0
 
+    # variables associated w/ betting
+    requirement: int = 0
+    investments: dict[Player, int] = {}
+    players_in : set[Player] = None
+    side_pots: set[(Player, amt)] = {}
 
+    def start_round(self):
+        self.requirement = 0
+        self.investments = {}
+        self.players_in = set(players)
+        self.side_pots = {}
+        # TODO filter players that need to be removed
+
+    def place_bet(self, player : Player, amt : int):
+        if amt < 0:
+            # fold by betting -1
+            self.players_in.remove(player)
+            return
+        player.money -= amt
+        self.investments[player] = self.investments.get(player, 0) + amt
+        if self.investments[player] < requirement:
+            side_pots.add((player, self.investments[player]))
+
+    def payout():
+        # TODO deal w/ payout logic -- promting for rankings happens here
+
+        """
+        basic idea -- ask for winners. If the winners are in a side pot, distribute said pot and all lower valued pots to the winners, and remove these players -- then ask for the runner up etc [etc does a lot of work lol]
+
+        """
+
+        pass
 
 
 def clear():
@@ -67,8 +92,6 @@ def __main__():
     print("Enter players in order")
     game = Game([Player(input()) for _ in range(num_players)])
 
-
-
     # main game loop
     while len(game.players) > 1:
         # sets up round
@@ -84,7 +107,7 @@ def __main__():
 
 
         still_betting = set(game.players)
-        pots = [Pot(still_betting, 0)]
+
 
         #TODO: put logic for side pots somewhere
 
