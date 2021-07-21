@@ -31,15 +31,15 @@ class Game:
 
     def start_round(self):
         self.requirement = 0
-        self.investments = {}
+        self.investments = {p: 0 for p in self.players}
         self.players_in = set(self.players)
         self.curr_round += 1
 
         clear()
         print("--------------------------")
         print(f"Round {self.curr_round}")
-        print(f"Small blind: {self.players[self.small_blind]}")
-        print(f"Big blind: {self.players[self.big_blind]}")
+        print(f"Small blind: {self.players[self.small_blind % len(self.players)]}")
+        print(f"Big blind: {self.players[self.big_blind % len(self.players)]}")
         print("--------------------------")
 
     def pass_button(self):
@@ -70,20 +70,20 @@ class Game:
                 ans = input().lower()
 
             # if winner not in a side pot, we are done in one step
-            if self.investments[ans] < self.requirement:
+            if self.investments[ans] >= self.requirement:
                 self.player_money[ans] += sum(self.investments.values())
                 break
 
-            for player, amt in self.investments.items().copy():
+            for player, amt in self.investments.items():
                 if player == ans:
                     continue
-                winnings = min(amt, self.investment[ans])
+                winnings = min(amt, self.investments[ans])
                 self.player_money[ans] += winnings
-                self.investment[player] -= winnings
+                self.investments[player] -= winnings
 
             # always get ur $ back when win"
-            self.player_money[ans] += self.investment[player]
-            self.investment[ans] = 0
+            self.player_money[ans] += self.investments[player]
+            self.investments[ans] = 0
             self.players_in.remove(ans)
             prompt = f"After {ans}, who won?"
 
@@ -91,12 +91,18 @@ class Game:
         print("RESULTS: ")
         to_remove = set()
         for player, amt in self.player_money.items():
-            print(f"{player} has ${amt}{'' if not amt else ' [eliminated]'}")
+            print(f"{player} has ${amt}{'' if amt else ' [eliminated]'}")
             if amt == 0:
                 to_remove.add(player)
         for player in to_remove:
             del self.player_money[player]
             self.players.remove(player)
+
+    def must_bet(self, player):
+        return player in self.players_in and self.investments[player] < self.requirement and self.player_money[player]
+
+    def more_rounds_needed(self):
+        return len(list(filter(lambda p: self.must_bet(p), self.players))) > 0
 
 
 def clear():
@@ -106,24 +112,78 @@ def clear():
         print('\n\n\n')
 
 
+def convert_bet_or_prompt(number_string, prompt="You must enter a number or valid move (c/f)", maximum=float('inf')):
+    try:
+        number = int(number_string)
+        if number < 0:
+            print("You cannot raise by a negative amount")
+        elif number <= maximum:
+            return number
+        else:
+            print(f"You only have ${maximum} to raise by.")
+    except:
+        print(prompt)
+
+
 def get_bet(game, player):
-    print(f"{player}, please enter your bet (enter '(c)all'/'(c)heck', '(f)old', or raise amount):")
+    print(f"Now betting: {player}")
+    if game.player_money[player] + game.investments[player] <= game.requirement:
+        print(f"All in at ${game.player_money[player] + game.investments[player]}? (y)es/(n)o: ")
+        while True:
+            ans = input().lower().strip()
+            if ans == 'y' or ans == 'yes':
+                return game.player_money[player]
+            elif ans == 'n' or ans == 'no':
+                return -1
+            else:
+                print("Enter (y)es or (n)o: ")
+    if game.investments[player] == game.requirement:
+        print(f"The pot contains ${sum(game.investments.values())}. You can (c)heck or raise up to "
+              f"${game.player_money[player]} above the current bet size of ${game.requirement}")
+        print(f"Please enter your bet (enter '(c)heck' or raise amount)")
+        while True:
+            ans = input().lower().strip()
+            if ans == 'c' or ans == 'call':
+                return 0
+            ans = convert_bet_or_prompt(ans, prompt="You must enter a valid number or '(c)all'")
+            if ans is not None:
+                return ans
+
+    print(f"The pot contains ${sum(game.investments.values())}. You can call with an additional "
+          f"${game.requirement - game.investments[player]}, or raise beyond that by up "
+          f"to ${game.player_money[player] - game.requirement}")
+    print(f"{player}, please enter your bet (enter '(c)all', '(f)old', or raise amount):")
     while True:
         ans = input().lower().strip()
         if ans == "fold" or ans == "f":
             return -1
-        if ans == "check" or ans == "call" or ans == "c":
-            return 0
-        try:
-            ans = int(ans)
-            if (ans < 0):
-                print("You cannot raise by a negative amount")
-            elif ans <= game.player_money[player]:
-                return ans
-            else:
-                print(f"You only have ${game.player_money[player]} to bet.")
-        except:
-            print("You must enter a number or valid move (c/f)")
+        if ans == "call" or ans == "c":
+            return game.requirement - game.investments[player]
+        ans = convert_bet_or_prompt(ans, maximum=game.player_money[player] - game.requirement)
+        if ans is not None:
+            return ans + game.requirement
+
+def play_hand(game):
+    # handle ante & blinds (TODO)
+    # go through 4 stages of betting
+    for betting_round in ["the pre-flop", "the flop", "the turn", "the river"]:
+        print(f"### Now placing bets for {betting_round}")
+
+        # go through each player to get bets
+        # TODO: ensure propper ordering relative to dealer
+        another_round = True
+        while another_round:
+            for i, p in enumerate(game.players):
+                if p not in game.players_in:
+                    continue
+                bet = get_bet(game, p)
+                if bet == -1:
+                    game.players_in.remove(p)
+                else:
+                    game.player_money[p] -= bet
+                    game.investments[p] = game.investments.get(p, 0) + bet
+                    game.requirement = max(game.requirement, game.investments[p])
+            another_round = game.more_rounds_needed()
 
 
 def __main__():
@@ -134,17 +194,8 @@ def __main__():
     # main game loop
     while len(game.players) > 1:
         game.start_round()
-        # handle ante & blinds (TODO)
-
-        # go through 4 stages of betting
-        for betting_round in ["the pre-flop", "the flop", "the turn", "the river"]:
-            print(f"### Now placing bets for {betting_round}")
-
-            # go through each player to get bets
-            # TODO: ensure propper ordering relative to dealer
-            for p in game.players_that_can_bet():
-                bet = get_bet(game, p)
-
+        play_hand(game)
+        game.payout()
     print(f"The winner is {next(iter(game.players))}.")
 
 
