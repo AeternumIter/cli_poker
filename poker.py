@@ -107,7 +107,7 @@ class Game:
 
 def clear():
     try:
-        os.system('clear')
+        os.system('cls')
     except:
         print('\n\n\n')
 
