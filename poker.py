@@ -9,7 +9,7 @@ for i in players:
     currentplayers.append(i) #Adds the players to the "currentplayers" list
 dealer = 0 #Defines the dealer variable
 callamount = 0 #Defines the call amount variable
-checkpossible = true #Defines the checkpossible variable
+checkpossible = True #Defines the checkpossible variable
 
 
 
@@ -26,7 +26,7 @@ def roundr():
         players[currentplayers[currentplayer]] -= 5
 
       callamount = 0 #Resets the call amount
-      checkpossible = true #Resets the checkpossible variable
+      checkpossible = True #Resets the checkpossible variable
       
       while len(currentplayers) > 1: #When there is more than one player playing
         print(currentplayers[currentplayer] + " Has " + str(players[currentplayers[currentplayer]])) #Displays how much money the player has (I think)
@@ -63,13 +63,13 @@ def roundr():
             callamount = int(input("What shall the bet be? "))
             players[currentplayers[currentplayer]] -= callamount #Subtracting money from account
             pot += callamount #Adding Money to pot
-            checkpossible = false
+            checkpossible = False
             if currentplayer == len(currentplayers) - 1: #Goes to the next player
                 currentplayer = 0
             else: 
                 currentplayer += 1
         elif cpa == "check": #If the player checks
-            if currentplayer == smallblind or checkpossible = true: #Checks if they can check     
+            if currentplayer == smallblind or checkpossible == True: #Checks if they can check     
                 pass
                 if currentplayer == len(currentplayers) - 1: #Goes to the next player
                     currentplayer = 0
